@@ -11,7 +11,7 @@ const FETCH_ISS_FLYOVER_TIMES = "https://iss-flyover.herokuapp.com/json/";
  *   - An error, if any (nullable)
  *   - The IP address as a string (null if error). Example: "162.245.144.188"
  */
-const fetchMyIP = function(callback) {
+const fetchMyIP = function (callback) {
   // use request to fetch IP address from JSON API
   request(FETCH_MY_API_ENDPOINT, (error, response, body) => {
     // error can be set if invalid domain, user is offline, etc.
@@ -33,7 +33,7 @@ const fetchMyIP = function(callback) {
   });
 };
 
-const fetchCoordsByIP = function(ip, callback) {
+const fetchCoordsByIP = function (ip, callback) {
   //use request to fetch co-ordinates from JSON API
   request(FETCH_COORDS_BY_API + ip, (error, response, body) => {
     // error can be set if invalid domain, user is offline, etc.
@@ -68,7 +68,7 @@ const fetchCoordsByIP = function(ip, callback) {
  *   - The fly over times as an array of objects (null if error). Example:
  *     [ { risetime: 134564234, duration: 600 }, ... ]
  */
-const fetchISSFlyOverTimes = function({ latitude, longitude }, callback) {
+const fetchISSFlyOverTimes = function ({ latitude, longitude }, callback) {
   //use request to fetch co-ordinates from JSON API
   request(
     FETCH_ISS_FLYOVER_TIMES + "?lat=" + latitude + "&lon=" + longitude,
@@ -94,4 +94,45 @@ const fetchISSFlyOverTimes = function({ latitude, longitude }, callback) {
   );
 };
 
-module.exports = { fetchISSFlyOverTimes };
+/**
+ * Orchestrates multiple API requests in order to determine the next 5 upcoming ISS fly overs for the user's current location.
+ * Input:
+ *   - A callback with an error or results.
+ * Returns (via Callback):
+ *   - An error, if any (nullable)
+ *   - The fly-over times as an array (null if error):
+ *     [ { risetime: <number>, duration: <number> }, ... ]
+ */
+const nextISSTimesForMyLocation = function (callback) {
+  //first step is to fetch our ip address
+  fetchMyIP((error, ip) => {
+    //if any error occurs then invoke the callback function with error and return
+    if (error) {
+      callback(error, null);
+      return;
+    }
+
+    //second step is to fetch the co-ordinates using the ip address we fetched from the above function
+    fetchCoordsByIP(ip, (error, data) => {
+      //if any error occurs then invoke the callback function with error and return
+      if (error) {
+        callback(error, null);
+        return;
+      }
+
+      //third and final step is to fetch the fly over times using co-ordinates we fetched from the above function
+      fetchISSFlyOverTimes(data, (error, data) => {
+        //if any error occurs then invoke the callback function with error and return
+        if (error) {
+          callback(error, null);
+          return;
+        }
+
+        //we have got the flyover times. Invoke the callback function with the data
+        callback(null, data);
+      });
+    });
+  });
+};
+
+module.exports = { nextISSTimesForMyLocation };
