@@ -1,5 +1,6 @@
 const request = require("request");
-const API_ENDPOINT = "https://api.ipify.org/?format=json";
+const FETCH_MY_API_ENDPOINT = "https://api.ipify.org/?format=json";
+const FETCH_COORDS_BY_API = "https://ipwho.is/";
 
 /**
  * Makes a single API request to retrieve the user's IP address.
@@ -11,7 +12,8 @@ const API_ENDPOINT = "https://api.ipify.org/?format=json";
  */
 const fetchMyIP = function(callback) {
   // use request to fetch IP address from JSON API
-  request(API_ENDPOINT, (error, response, body) => {
+  request(FETCH_MY_API_ENDPOINT, (error, response, body) => {
+    // error can be set if invalid domain, user is offline, etc.
     if (error) {
       callback(error, null);
       return;
@@ -30,4 +32,30 @@ const fetchMyIP = function(callback) {
   });
 };
 
-module.exports = { fetchMyIP };
+const fetchCoordsByIP = function(ip, callback) {
+  //use request to fetch co-ordinates from JSON API
+  request(FETCH_COORDS_BY_API + ip, (error, response, body) => {
+    // error can be set if invalid domain, user is offline, etc.
+    if (error) {
+      callback(error, null);
+      return;
+    }
+
+    //parsing the returned body
+    const parsedBody = JSON.parse(body);
+
+    //check if success is false
+    if (!parsedBody.success) {
+      const msg = `Success msg was: ${parsedBody.success}. Server message says: ${parsedBody.message} when fetching for IP ${parsedBody.ip}`;
+      callback(Error(msg), null);
+      return;
+    }
+
+    //Because we know the names of keys from the parsedBody therefore we can destruct the object
+    const { latitude, longitude } = parsedBody;
+    callback(null, {latitude, longitude});
+  });
+};
+
+
+module.exports = {};
